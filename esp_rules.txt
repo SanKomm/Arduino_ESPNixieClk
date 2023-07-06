@@ -1,0 +1,3 @@
+RuleTimer1 1
+rule1 ON Rules#Timer=1 DO DisplayText [tS] endon
+	ON Rules#Timer=1 DO RuleTimer1 1 endon
