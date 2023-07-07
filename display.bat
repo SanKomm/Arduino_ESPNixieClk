@@ -1,5 +1,7 @@
-; clr screen
+;clear screen
 [z]
-; test
-[dv0:50:70:19:3:2:1:11:1:1:[tS]::]
-
+;some text
+[l1c1]Clock test!
+[l2c1]Display time: 
+;system time
+[l3c1tS]
