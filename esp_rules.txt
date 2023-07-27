@@ -1,7 +1,0 @@
-RuleTimer1 1
-rule1 ON Rules#Timer=1 DO DisplayText [tS] endon
-	ON Rules#Timer=1 DO RuleTimer1 1 endon
-
-rule1 ON Rules#Timer=1 DO SerialSend2 %time% ENDON 
-ON Rules#Timer=1 DO RuleTimer1 1 ENDON 
-ON System#Boot DO RuleTimer1 1 ENDON
