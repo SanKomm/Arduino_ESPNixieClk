@@ -8,7 +8,6 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
   Complete project details at https://randomnerdtutorials.com  
 *********/
 
-#include <ESP8266WiFi.h>
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>         // https://github.com/tzapu/WiFiManager
@@ -103,9 +102,9 @@ void bitbang_bit(int value){
 void bitbang_digit(int digit){
   int i = 0;
   bitbang_bit(blink);
-    for(i=0;i<4;i++){//siin oli error 0-3 ulatus
-      bitbang_bit(lookup[digit] << i >> 3);
-    }
+  for(i=0;i<4;i++){//siin oli error 0-3 ulatus
+    bitbang_bit(lookup[digit] << i >> 3);
+  }
   bitbang_bit(blink);
   bitbang_bit(blink);
   bitbang_bit(blink);
@@ -246,12 +245,13 @@ void loop(){
     Serial.println("");
   }
 
+
+  blink = !blink;
   if(TIME){
     int hour = timeClient.getHours();
     int minute = timeClient.getMinutes();
     int second = timeClient.getSeconds();
-
-    blink = false;
+    
     dump_time((hour + daylightSavingTime) % 24, minute, second);
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
