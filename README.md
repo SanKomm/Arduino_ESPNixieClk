@@ -1,4 +1,4 @@
-# nixie_esp_test
+# nixie_esp
 
 Made with Arduino
 Uses:
