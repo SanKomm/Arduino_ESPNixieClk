@@ -4,3 +4,6 @@
 [submodule "libraries/WiFiManager"]
 	path = libraries/WiFiManager
 	url = https://github.com/tzapu/WiFiManager
+[submodule "makeEspArduino"]
+	path = makeEspArduino
+	url = https://github.com/plerup/makeEspArduino.git
