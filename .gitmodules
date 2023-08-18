@@ -1,0 +1,6 @@
+[submodule "libraries/NTPClient"]
+	path = libraries/NTPClient
+	url = https://github.com/arduino-libraries/NTPClient.git
+[submodule "libraries/WiFiManager"]
+	path = libraries/WiFiManager
+	url = https://github.com/tzapu/WiFiManager
