@@ -38,14 +38,9 @@ endif
 	cd $(ESP_ROOT) && git submodule update --init
 	cd $(ESP_ROOT)/tools && python3 get.py
 
-#update used libs
-addlibs:
-	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/libraries && \
-	git submodule update --init
-
-#make sure makeEspArduino is present
-addespmake:
-	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/makeEspArduino && git submodule update --init
+#add the missing libs and makeesp files
+submodules:
+	git submodules update --init
 
 #flashes esp8266 with specified parameters
 espmake:
