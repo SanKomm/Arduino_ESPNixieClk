@@ -40,7 +40,7 @@ endif
 
 #add the missing libs and makeesp files
 submodules:
-	git submodules update --init
+	git submodule update --init
 
 #flashes esp8266 with specified parameters
 espmake:
