@@ -1,7 +1,7 @@
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MKFILE_DIR := $(dir $(MKFILE_PATH))
-ARDUINO_ROOT ?= $(shell find $(HOME) -name 'Arduino' | grep -v AppData)
-ESP_ROOT = $(ARDUINO_ROOT)/hardware/esp8266com/esp8266
+ARDUINO_ROOT ?= $(shell find $(HOME) -name 'Arduino' 2>/dev/null | grep -v AppData)
+ESP_ROOT ?= $(ARDUINO_ROOT)/hardware/esp8266com/esp8266
 
 #makeEspArduino parameters
 SKETCH ?= $(ARDUINO_ROOT)/Arduino_ESPNixieClk/Arduino_ESPNixieClk.ino
@@ -37,6 +37,11 @@ endif
 	git clone https://github.com/esp8266/Arduino.git esp8266
 	cd $(ESP_ROOT) && git submodule update --init
 	cd $(ESP_ROOT)/tools && python3 get.py
+
+#update used libs
+addlibs:
+	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/libraries && \
+	git submodule update --init
 
 #make sure makeEspArduino is present
 addespmake:
