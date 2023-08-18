@@ -1,4 +1,4 @@
-# nixie_esp
+# Arduino_ESPNixieClk 
 
 Made with Arduino IDE version 2.1.1.  
 Utilises Arduino core for ESP8266(https://github.com/esp8266/Arduino) installed according to these guidelines: https://github.com/esp8266/Arduino#installing-with-boards-manager  
