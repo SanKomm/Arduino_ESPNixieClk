@@ -16,16 +16,21 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 #include <NTPClient.h>
 #include <Time.h>
 
-//NTP stuff
-const long utcOffsetInSeconds = 3*3600;
-const long eightHrInterval = 28800000;
+//NTP offset and refresh interval
+#define utcOffsetInSeconds 3*3600
+#define eightHrInterval 28800000
 
 // Assign output variables to GPIO pins
 const int clock1 = 3;
 const int data = 2;
 const int latch = 0;
-const bool DEBUG = true;
+const bool DEBUG = false;
 const bool DEBUG_PIN = false;
+
+//Timer, timer interval, display toggle
+unsigned long prevMil = 0;
+const long interval = 10000;
+bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 // Define NTP Client to get time
@@ -75,15 +80,11 @@ void setup() {
   
 }
 
-//Note that keyboard input is lost beyond this point!
-
-bool DST = false;
-bool DATE = false;
 bool TIME = true;
+bool DATE = false;
+bool DATETIME = false;
 bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
-int countdown = 0;
-int daylightSavingTime= 0;
 
 void bitbang_bit(int value){
   if(value & 1){
@@ -176,24 +177,21 @@ void loop(){
             client.println("Connection: close");
             client.println();
             
-            if (header.indexOf("GET /DST/on") >= 0) {
-              Serial.println("DST on");
-              DST = true;
-              daylightSavingTime = 1;
-            } else if (header.indexOf("GET /DST/off") >= 0) {
-              Serial.println("DST off");
-              DST = false;
-              daylightSavingTime = 0;
-            }
-
             if (header.indexOf("GET /DATE/") >= 0) {
               Serial.println("Date");
               DATE = true;
               TIME = false;
+              DATETIME = false;
             } else if (header.indexOf("GET /TIME/") >= 0) {
               Serial.println("TIME");
               DATE = false;
               TIME = true;
+              DATETIME = false;
+            } else if (header.indexOf("GET /DATETIME/") >= 0){
+              Serial.println("DATE/TIME");
+              DATE = false;
+              TIME = false;
+              DATETIME = true;
             }
 
             // Display the HTML web page
@@ -209,20 +207,15 @@ void loop(){
             
             // Web Page Heading
             client.println("<body><h1>ESP8266 Web Server</h1>");
-            
-            client.println("<p>DST:</p>");
-            if (DST) {
-              client.println("<p><a href=\"/DST/off\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/DST/on\"><button class=\"button button2\">OFF</button></a></p>");
-            } 
 
-            client.println("<p>Date or Time:</p>");
+            client.println("<p>Date or Time Display setting:</p>");
             if (DATE) {
-              client.println("<p><a href=\"/TIME/\"><button class=\"button\">DATE</button></a></p>");
+              client.println("<p><a href=\"/DATETIME/\"><button class=\"button\">DATE</button></a></p>");
             } else if (TIME) {
               client.println("<p><a href=\"/DATE/\"><button class=\"button\">TIME</button></a></p>");
-            } 
+            } else if (DATETIME){
+              client.println("<p><a href=\"/TIME/\"><button class=\"button\">DATE/TIME</button></a></p>");
+            }
             client.println("</body></html>");
             
             // The HTTP response ends with another blank line
@@ -244,24 +237,40 @@ void loop(){
     Serial.println("Client disconnected.");
     Serial.println("");
   }
+  int hour = timeClient.getHours();
+  int minute = timeClient.getMinutes();
+  int second = timeClient.getSeconds();
 
+  time_t epochTime = timeClient.getEpochTime(); //u. long annab vale aja, peab olema time_t
+  struct tm *ptm = gmtime(&epochTime);
+  int monthDay = ptm->tm_mday;
+  int currentMonth = ptm->tm_mon+1;
+  int currentYear = ptm->tm_year + 1900;
+
+  if(millis() - prevMil >= interval){
+    prevMil = millis();
+    toggleDisplay = !toggleDisplay;
+    Serial.println(toggleDisplay);
+  }
 
   blink = !blink;
   if(TIME){
-    int hour = timeClient.getHours();
-    int minute = timeClient.getMinutes();
-    int second = timeClient.getSeconds();
-    
-    dump_time((hour + daylightSavingTime) % 24, minute, second);
+    dump_time((hour) % 24, minute, second);
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
   }else if(DATE){
-    time_t epochTime = timeClient.getEpochTime(); //u. long annab vale aja, peab olema time_t
-    struct tm *ptm = gmtime(&epochTime);
-    int monthDay = ptm->tm_mday;
-    int currentMonth = ptm->tm_mon+1;
-    int currentYear = ptm->tm_year + 1900;
     dump_date(monthDay, currentMonth, (currentYear-2000));
+    digitalWrite(latch, HIGH);
+    digitalWrite(latch, LOW);
+  }else if(DATETIME){
+    if(toggleDisplay){
+      dump_date(monthDay, currentMonth, (currentYear-2000));
+      Serial.println("Showing date");
+    }else{
+      dump_time((hour) % 24, minute, second);
+      Serial.println("Showing time");
+    }
+
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
   }
