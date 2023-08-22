@@ -1,5 +1,3 @@
-MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
-MKFILE_DIR := $(dir $(MKFILE_PATH))
 ARDUINO_ROOT ?= $(shell find $(HOME) -name 'Arduino' 2>/dev/null | grep -v AppData)
 ESP_ROOT ?= $(ARDUINO_ROOT)/hardware/esp8266com/esp8266
 
@@ -11,13 +9,6 @@ CUSTOM_LIBS ?= $(ESP_ROOT)/libraries \
 EXCLUDE_DIRS ?= ESP8266mDNS
 UPLOAD_PORT ?= COM6
 UPLOAD_SPEED ?= 115200
-
-#path verification
-path:
-	$(info $(value MKFILE_PATH))
-	$(info $(value MKFILE_DIR))
-	$(info $(HOME))
-	$(info $(ARDUINO_ROOT))
 
 #check for and add esp8266 core
 addesp8266:
