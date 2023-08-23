@@ -1,4 +1,6 @@
+#######
 ARDUINO_ROOT ?= $(shell find $(HOME) -name 'Arduino' 2>/dev/null | grep -v AppData)
+#ARDUINO_ROOT ?= $(HOME)/Documents/Arduino
 ESP_ROOT ?= $(ARDUINO_ROOT)/hardware/esp8266com/esp8266
 
 #makeEspArduino parameters
@@ -12,16 +14,10 @@ UPLOAD_SPEED ?= 115200
 
 #check for and add esp8266 core
 addesp8266:
-ifneq ($(wildcard $(ARDUINO_ROOT)/hardware/.),)
-	$(info "Hardware")
-else
-	$(info "No hardware")
+ifeq ($(wildcard $(ARDUINO_ROOT)/hardware/.),)
 	cd $(ARDUINO_ROOT) && mkdir hardware
 endif
-ifneq ($(wildcard $(ARDUINO_ROOT)/hardware/esp8266com/.),)
-	$(info "esp8266com")
-else
-	$(info "No esp8266com")
+ifeq ($(wildcard $(ARDUINO_ROOT)/hardware/esp8266com/.),)
 	cd $(ARDUINO_ROOT)/hardware && mkdir esp8266com
 endif
 	cd $(ARDUINO_ROOT)/hardware/esp8266com && \
@@ -43,3 +39,12 @@ espmake:
 	UPLOAD_PORT=$(UPLOAD_PORT) \
 	UPLOAD_SPEED=$(UPLOAD_SPEED) \
 	flash
+espclean:
+	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/makeEspArduino && $(MAKE) -f makeEspArduino.mk \
+	ESP_ROOT=$(ESP_ROOT) \
+	CUSTOM_LIBS=$(CUSTOM_LIBS) \
+	EXCLUDE_DIRS=$(EXCLUDE_DIRS) \
+	SKETCH=$(SKETCH) \
+	UPLOAD_PORT=$(UPLOAD_PORT) \
+	UPLOAD_SPEED=$(UPLOAD_SPEED) \
+	clean
