@@ -1,13 +1,12 @@
-#######
-ARDUINO_ROOT ?= $(shell find $(HOME) -name 'Arduino' 2>/dev/null | grep -v AppData)
-#ARDUINO_ROOT ?= $(HOME)/Documents/Arduino
+ARDUINO_ROOT ?= $(abspath $(wildcard ../../Arduino/.) $(wildcard ../Arduino/.))
 ESP_ROOT ?= $(ARDUINO_ROOT)/hardware/esp8266com/esp8266
+SKETCH_FOLDER = $(ARDUINO_ROOT)/Arduino_ESPNixieClk
 
 #makeEspArduino parameters
-SKETCH ?= $(ARDUINO_ROOT)/Arduino_ESPNixieClk/Arduino_ESPNixieClk.ino
+SKETCH ?= $(SKETCH_FOLDER)/Arduino_ESPNixieClk.ino
 CUSTOM_LIBS ?= $(ESP_ROOT)/libraries \
-	$(ARDUINO_ROOT)/Arduino_ESPNixieClk/libraries/WiFiManager \
-	$(ARDUINO_ROOT)/Arduino_ESPNixieClk/libraries/NTPClient
+	$(SKETCH_FOLDER)/libraries/WiFiManager \
+	$(SKETCH_FOLDER)/libraries/NTPClient
 EXCLUDE_DIRS ?= ESP8266mDNS
 UPLOAD_PORT ?= COM6
 UPLOAD_SPEED ?= 115200
@@ -31,7 +30,7 @@ submodules:
 
 #flashes esp8266 with specified parameters
 espmake:
-	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/makeEspArduino && $(MAKE) -f makeEspArduino.mk \
+	cd $(SKETCH_FOLDER)/makeEspArduino && $(MAKE) -f makeEspArduino.mk \
 	ESP_ROOT=$(ESP_ROOT) \
 	CUSTOM_LIBS=$(CUSTOM_LIBS) \
 	EXCLUDE_DIRS=$(EXCLUDE_DIRS) \
@@ -40,7 +39,7 @@ espmake:
 	UPLOAD_SPEED=$(UPLOAD_SPEED) \
 	flash
 espclean:
-	cd $(ARDUINO_ROOT)/Arduino_ESPNixieClk/makeEspArduino && $(MAKE) -f makeEspArduino.mk \
+	cd $(SKETCH_FOLDER)/makeEspArduino && $(MAKE) -f makeEspArduino.mk \
 	ESP_ROOT=$(ESP_ROOT) \
 	CUSTOM_LIBS=$(CUSTOM_LIBS) \
 	EXCLUDE_DIRS=$(EXCLUDE_DIRS) \
