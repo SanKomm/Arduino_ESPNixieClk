@@ -61,6 +61,6 @@ jobs:
       # in the build matrix.
       - name: Compile Sketch
         run: >
-          arduino-cli compile --fqbn ${{ matrix.fqbn }} 
+          arduino-cli compile --fqbn ${{ matrix.fqbn }}
           --libraries=libraries/WiFiManager,libraries/NTPClient
           Arduino_ESPNixieClk

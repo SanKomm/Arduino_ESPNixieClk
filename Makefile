@@ -17,9 +17,9 @@ submodules:
 #creates sketch bin
 makebin: $(SKETCH_FOLDER)/Arduino_ESPNixieClk.ino.bin
 	arduino-cli compile --libraries=$(LIBS) \
-	-b esp8266:esp8266:nodemcu $(SKETCH_FOLDER)
+	-b esp8266:esp8266:generic $(SKETCH_FOLDER)
 
 #flashes esp8266 with specified parameters
 makeflash:
-	arduino-cli upload -b esp8266:esp8266:nodemcu -p $(UPLOAD_PORT) $(SKETCH_FOLDER)
+	arduino-cli upload -b esp8266:esp8266:generic -p $(UPLOAD_PORT) $(SKETCH_FOLDER)
 
