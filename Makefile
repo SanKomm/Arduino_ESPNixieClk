@@ -1,4 +1,4 @@
-SKETCH_FOLDER := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+SKETCH_FOLDER := Arduino_ESPNixieClk
 
 #arduino-cli parameters
 LIBS ?= libraries/WiFiManager,libraries/NTPClient
@@ -15,7 +15,7 @@ submodules:
 	git submodule update --init
 
 #creates sketch bin
-makebin: Arduino_ESPNixieClk.ino.bin
+makebin: $(SKETCH_FOLDER)/Arduino_ESPNixieClk.ino.bin
 	arduino-cli compile --libraries=$(LIBS) \
 	-b esp8266:esp8266:nodemcu $(SKETCH_FOLDER)
 
