@@ -43,10 +43,6 @@ jobs:
       # First of all, we clone the repo using the `checkout` action.
       - name: Checkout
         uses: actions/checkout@v3
-      
-      #submodules
-      - name: checkout all the submodules
-        uses: actions/checkout@v2
         with:
           submodules: recursive
 
