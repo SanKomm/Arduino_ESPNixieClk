@@ -61,7 +61,7 @@ jobs:
 
       #install libs
       - name: Install libs
-        run: arduino-cli lib install Time
+        run: arduino-cli lib install Time@1.6.0
 
       # Finally, we compile the sketch, using the FQBN that was set
       # in the build matrix.
