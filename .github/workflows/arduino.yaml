@@ -14,6 +14,7 @@ jobs:
 
   # This is the name of the job - can be whatever.
   test-matrix:
+    permissions: write-all
 
     # Here we tell GitHub that the jobs must be determined
     # dynamically depending on a matrix configuration.
