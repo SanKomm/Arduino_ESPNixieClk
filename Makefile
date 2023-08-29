@@ -16,7 +16,7 @@ submodules:
 
 #creates sketch bin
 makebin: $(SKETCH_FOLDER)/Arduino_ESPNixieClk.ino.bin
-	arduino-cli compile --libraries=$(LIBS) \
+	arduino-cli compile --library=$(LIBS) \
 	-b esp8266:esp8266:generic $(SKETCH_FOLDER)
 
 #flashes esp8266 with specified parameters
