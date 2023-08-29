@@ -10,11 +10,8 @@ jobs:
 
     strategy:
       matrix:
-        
         arduino-platform: ["esp8266:esp8266"]
-        
         include:
-          
           - arduino-platform: "esp8266:esp8266"
             fqbn: "esp8266:esp8266:generic"
 
