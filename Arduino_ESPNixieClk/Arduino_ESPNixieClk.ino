@@ -138,18 +138,15 @@ void bitbang_digit(int digit){
   bitbang_bit(blink);
 }
 
-/*
-*Description:  Writes the current time to the Nixie clock.
-*Parameters:   hour - current hour(s)
-*              minute - current minutes
-*              second - current seconds
-*/
-void dump_time(int hour, int minute, int second){    
+
+//Description:  Writes the current time to the Nixie clock.
+void dump_time(){
+  int hour = timeClient.getHours() % 24;
+  int minute = timeClient.getMinutes();
+  int second = timeClient.getSeconds();
+
   if (DEBUG)
     {
-      //Serial.print(daysOfTheWeek[timeClient.getDay()]);
-      //Serial.print(" ");
-      //Serial.println(timeClient.getFormattedTime());
       Serial.print("Time is ");
       Serial.print(hour);
       Serial.print(":");
@@ -165,17 +162,15 @@ void dump_time(int hour, int minute, int second){
     bitbang_digit(second % 10);
 }
 
-/*
-*Description:  Writes the current date to the Nixie clock.
-*Parameters:   day - current day of the month.
-*              month - current month.
-*              year - current year.
-*/
-void dump_date(int day, int month, int year){
+//Description:  Writes the current date to the Nixie clock.
+void dump_date(){
+  time_t epochTime = timeClient.getEpochTime(); //u. long does not work
+  struct tm *ptm = gmtime(&epochTime);
+  int day = ptm->tm_mday;
+  int month = ptm->tm_mon+1;//tm_mon gives 0-11
+  int year = ptm->tm_year + 1900;//tm_year is years since 1900
   if (DEBUG)
     {
-      //time_t epochTime = timeClient.getEpochTime();
-      //Serial.println(epochTime);
       Serial.print("Date is ");
       Serial.print(day);
       Serial.print("-");
@@ -187,8 +182,8 @@ void dump_date(int day, int month, int year){
     bitbang_digit(day % 10);
     bitbang_digit(month/ 10);
     bitbang_digit(month % 10);
-    bitbang_digit(year / 10);
-    bitbang_digit(year % 10);
+    bitbang_digit((year-2000) / 10);
+    bitbang_digit((year-2000) % 10);
 }
 
 void setup() {
@@ -237,16 +232,6 @@ void setup() {
 //Main loop
 void loop(){
   timeClient.update();
-
-  int hour = timeClient.getHours();
-  int minute = timeClient.getMinutes();
-  int second = timeClient.getSeconds();
-
-  time_t epochTime = timeClient.getEpochTime(); //u. long annab vale aja, peab olema time_t
-  struct tm *ptm = gmtime(&epochTime);
-  int monthDay = ptm->tm_mday;
-  int currentMonth = ptm->tm_mon+1;
-  int currentYear = ptm->tm_year + 1900;
   
   //If displaying date and time, then switch the deisplay every 10 seconds.
   if(millis() - prevMil >= interval){
@@ -259,18 +244,18 @@ void loop(){
   
   //Check the display format and output appropriate info.
   if(TIME){
-    dump_time((hour) % 24, minute, second);
+    dump_time();
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
   }else if(DATE){
-    dump_date(monthDay, currentMonth, (currentYear-2000));
+    dump_date();
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
   }else if(DATETIME){
     if(toggleDisplay){
-      dump_date(monthDay, currentMonth, (currentYear-2000));
+      dump_date();
     }else{
-      dump_time((hour) % 24, minute, second);
+      dump_time();
     }
     digitalWrite(latch, HIGH);
     digitalWrite(latch, LOW);
