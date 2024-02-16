@@ -3,14 +3,13 @@ https://github.com/laurivosandi/nixiesp12/blob/master/firmware/main.py
 https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-parameter-and-manage-your-ssid-and-password/
 */
 
-#include <WiFiUdp.h>
 #include <WiFiManager.h>
-#include <NTPClient.h>
 #include <Time.h>
 
-//NTP offset and refresh interval.
-#define utcOffsetInSeconds 3*3600
-#define eightHrInterval 28800000
+//Timezone, NTP server and refresh interval.
+#define MY_TZ "EET-2EEST,M3.5.0/3,M10.5.0/4"
+#define MY_NTP_SERVER "at.pool.ntp.org"
+#define updateInterval 360000
 
 //Assign output variables to GPIO pins.
 const int clock1 = 3;
@@ -23,7 +22,8 @@ const bool DEBUG_PIN = false;
 
 //Timer, timer interval, display toggle
 unsigned long prevMil = 0;
-const long interval = 10000;
+unsigned long ntpUpdate = millis();
+const long interval = 1000;
 bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -35,11 +35,16 @@ bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
 
 //Define NTP Client to get time.
+/*
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds, eightHrInterval);
-
+*/
 //Default value for clock display format.
 char output[] = "TIME";
+
+//Time structs
+time_t now;
+tm tm;
 
 /*
 *Description:  Appends the ESP MAC address to the accesspoint name. 
@@ -141,9 +146,9 @@ void bitbang_digit(int digit){
 
 //Description:  Writes the current time to the Nixie clock.
 void dump_time(){
-  int hour = timeClient.getHours() % 24;
-  int minute = timeClient.getMinutes();
-  int second = timeClient.getSeconds();
+  int hour = tm.tm_hour;
+  int minute = tm.tm_min;
+  int second = tm.tm_sec;
 
   if (DEBUG)
     {
@@ -164,11 +169,9 @@ void dump_time(){
 
 //Description:  Writes the current date to the Nixie clock.
 void dump_date(){
-  time_t epochTime = timeClient.getEpochTime(); //u. long does not work
-  struct tm *ptm = gmtime(&epochTime);
-  int day = ptm->tm_mday;
-  int month = ptm->tm_mon+1;//tm_mon gives 0-11
-  int year = ptm->tm_year + 1900;//tm_year is years since 1900
+  int day = tm.tm_mday;
+  int month = tm.tm_mon+1;
+  int year = tm.tm_year-100;
   if (DEBUG)
     {
       Serial.print("Date is ");
@@ -201,8 +204,10 @@ void setup() {
   WiFiManagerParameter custom_output("State", "output", output, 4);
   WiFiManager wifiManager;
   
+  configTime(MY_TZ, MY_NTP_SERVER);
+
   //Uncomment and run it once, if you want to erase all the stored information.
-  wifiManager.resetSettings();
+  //wifiManager.resetSettings();
 
   //Add the input to the WifiManager.
   wifiManager.addParameter(&custom_output);
@@ -220,47 +225,53 @@ void setup() {
   
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
-  
+
   //Take display input, convert it to uppercase and set display format based on the result.
   strcpy(output, custom_output.getValue());
   toUpper(output);
   setDisplay(output);
 
-  timeClient.begin();
 }
 
 //Main loop
 void loop(){
-  timeClient.update();
   
   //If displaying date and time, then switch the deisplay every 10 seconds.
   if(millis() - prevMil >= interval){
     prevMil = millis();
+    time(&now);
+    localtime_r(&now,&tm);
+    
+    //Check the display format and output appropriate info.
+    if(TIME){
+      dump_time();
+      digitalWrite(latch, HIGH);
+      digitalWrite(latch, LOW);
+    }else if(DATE){
+      dump_date();
+      digitalWrite(latch, HIGH);
+      digitalWrite(latch, LOW);
+    }else if(DATETIME){
+      if(toggleDisplay){
+        dump_date();
+      }else{
+        dump_time();
+      }
+      digitalWrite(latch, HIGH);
+      digitalWrite(latch, LOW);
+    }
+    
+    blink = !blink;
+  }
+
+  if(millis() - prevMil >= 10*interval){
     toggleDisplay = !toggleDisplay;
     Serial.println(toggleDisplay);
   }
 
-  blink = !blink;
-  
-  //Check the display format and output appropriate info.
-  if(TIME){
-    dump_time();
-    digitalWrite(latch, HIGH);
-    digitalWrite(latch, LOW);
-  }else if(DATE){
-    dump_date();
-    digitalWrite(latch, HIGH);
-    digitalWrite(latch, LOW);
-  }else if(DATETIME){
-    if(toggleDisplay){
-      dump_date();
-    }else{
-      dump_time();
-    }
-    digitalWrite(latch, HIGH);
-    digitalWrite(latch, LOW);
+  if(millis() - ntpUpdate >=  updateInterval){
+    Serial.println("Refreshing connection...");
+    Serial.flush();
+    ESP.restart();
   }
-
-  //1 second delay
-  delay(1000);
 }
