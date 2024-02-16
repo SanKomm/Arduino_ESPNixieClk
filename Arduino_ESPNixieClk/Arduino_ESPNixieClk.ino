@@ -22,7 +22,6 @@ const bool DEBUG_PIN = false;
 
 //Timer, timer interval, display toggle
 unsigned long prevMil = 0;
-unsigned long ntpUpdate = millis();
 const long interval = 1000;
 bool toggleDisplay = false;
 
@@ -45,6 +44,11 @@ char output[] = "TIME";
 //Time structs
 time_t now;
 tm tm;
+
+//"weak" function to set NTP update interval
+uint32_t sntp_update_delay_MS_rfc_not_less_than_15000(){
+  return 8 * 60 * 60 * 1000ul;
+}
 
 /*
 *Description:  Appends the ESP MAC address to the accesspoint name. 
@@ -267,11 +271,5 @@ void loop(){
   if(millis() - prevMil >= 10*interval){
     toggleDisplay = !toggleDisplay;
     Serial.println(toggleDisplay);
-  }
-
-  if(millis() - ntpUpdate >=  updateInterval){
-    Serial.println("Refreshing connection...");
-    Serial.flush();
-    ESP.restart();
   }
 }
