@@ -22,6 +22,7 @@ const bool DEBUG_PIN = false;
 
 //Timer, timer interval, display toggle
 unsigned long prevMil = 0;
+unsigned long prevMil_10 = 0;
 const long interval = 1000;
 bool toggleDisplay = false;
 
@@ -47,7 +48,11 @@ tm tm;
 
 //"weak" function to set NTP update interval
 uint32_t sntp_update_delay_MS_rfc_not_less_than_15000(){
-  return 8 * 60 * 60 * 1000ul;
+  return 8 * 60 * 60 * 1000ul;//8 hours 
+}
+
+void time_is_set(){
+  Serial.println("Update NTP connection.");
 }
 
 /*
@@ -208,7 +213,10 @@ void setup() {
   WiFiManagerParameter custom_output("State", "output", output, 4);
   WiFiManager wifiManager;
   
+  //Timezone and NTP configuration
   configTime(MY_TZ, MY_NTP_SERVER);
+
+  settimeofday_cb(time_is_set);
 
   //Uncomment and run it once, if you want to erase all the stored information.
   //wifiManager.resetSettings();
@@ -268,8 +276,8 @@ void loop(){
     blink = !blink;
   }
 
-  if(millis() - prevMil >= 10*interval){
+  if(millis() - prevMil_10 >= 10*interval){
+    prevMil_10 = millis();
     toggleDisplay = !toggleDisplay;
-    Serial.println(toggleDisplay);
   }
 }
