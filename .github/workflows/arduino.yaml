@@ -41,7 +41,7 @@ jobs:
       - name: Compile Sketch
         run: >
           arduino-cli compile --fqbn ${{ matrix.fqbn }}
-          --library=libraries/WiFiManager,libraries/NTPClient
+          --library=libraries/WiFiManager
           Arduino_ESPNixieClk
 
       - name: Create Release
