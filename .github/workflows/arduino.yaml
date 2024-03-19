@@ -43,7 +43,7 @@ jobs:
 
       - name: Compile Sketch
         run: >
-          arduino-cli compile --fqbn ${{ matrix.fqbn }}
+          arduino-cli compile --fqbn ${{ matrix.fqbn }} -e
           Arduino_ESPNixieClk
 
       - name: Create Release
@@ -64,6 +64,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./Arduino_ESPNixieClk/Arduino_ESPNixieClk.ino.bin
+          asset_path: ./Arduino_ESPNixieClk/build/esp8266.esp8266.generic/Arduino_ESPNixieClk.ino.bin
           asset_name: Arduino_ESPNixieClk.ino.bin
           asset_content_type: application/bin
