@@ -36,7 +36,7 @@ jobs:
           ${{ matrix.arduino-platform }}
 
       - name: Install time lib
-        run: arduino-cli lib install Time@1.6.0
+        run: arduino-cli lib install time
 
       - name: Install wifi lib
         run: arduino-cli lib install wifimanager
