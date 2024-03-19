@@ -35,8 +35,11 @@ jobs:
           --additional-urls=http://arduino.esp8266.com/stable/package_esp8266com_index.json
           ${{ matrix.arduino-platform }}
 
-      - name: Install libs
+      - name: Install time lib
         run: arduino-cli lib install Time@1.6.0
+
+      - name: Install wifi lib
+        run: arduino-cli lib install wifimanager
 
       - name: Compile Sketch
         run: >
