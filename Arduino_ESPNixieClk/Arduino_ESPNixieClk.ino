@@ -4,7 +4,7 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 */
 
 #include <WiFiManager.h>
-#include <Time.h>
+#include <TimeLib.h>
 
 //Timezone, NTP server and refresh interval.
 #define MY_TZ "EET-2EEST,M3.5.0/3,M10.5.0/4"
@@ -43,7 +43,7 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds, eightHrInterval
 char output[] = "TIME";
 
 //Time structs
-time_t now;
+time_t no;
 tm tm;
 
 //"weak" function to set NTP update interval
@@ -251,8 +251,8 @@ void loop(){
   //If displaying date and time, then switch the deisplay every 10 seconds.
   if(millis() - prevMil >= interval){
     prevMil = millis();
-    time(&now);
-    localtime_r(&now,&tm);
+    time(&no);
+    localtime_r(&no,&tm);
     
     //Check the display format and output appropriate info.
     if(TIME){
