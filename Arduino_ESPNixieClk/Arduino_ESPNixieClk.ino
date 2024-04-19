@@ -28,9 +28,13 @@ bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-bool TIME = true;
-bool DATE = false;
-bool DATETIME = false;
+enum format{
+  TIME,
+  DATE,
+  DATETIME
+};
+enum format displayFormat = TIME;
+
 bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
 
@@ -95,26 +99,18 @@ void toUpper(char *output){
 */
 void setDisplay(char output[]){
   if(!strcmp(output,"TIME")){
-    TIME = true;
-    DATE = false;
-    DATETIME = false;
+    displayFormat = TIME;
     Serial.println("Displaying time.");
   }else if(!strcmp(output,"DATE")){
-    TIME = false;
-    DATE = true;
-    DATETIME = false;
+    displayFormat = DATE;
     Serial.println("Displaying date.");
   }else if(!strcmp(output,"DTTM")){
-    TIME = false;
-    DATE = false;
-    DATETIME = true;
+    displayFormat = DATETIME;
     Serial.println("Displaying date and time.");
   }else{
     Serial.print("Output mode error: ");
     Serial.println(output);
-    TIME = true;
-    DATE = false;
-    DATETIME = false;
+    displayFormat = TIME;
     Serial.println("Displaying time.");
   }
 }
@@ -198,6 +194,13 @@ void dump_date(){
     bitbang_digit((year-2000) % 10);
 }
 
+//Rename
+void func_replace(void (*func)(void)){
+  func();
+  digitalWrite(latch, HIGH);
+  digitalWrite(latch, LOW);
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -219,7 +222,7 @@ void setup() {
   settimeofday_cb(time_is_set);
 
   //Uncomment and run it once, if you want to erase all the stored information.
-  //wifiManager.resetSettings();
+  wifiManager.resetSettings();
 
   //Add the input to the WifiManager.
   wifiManager.addParameter(&custom_output);
@@ -255,24 +258,24 @@ void loop(){
     localtime_r(&no,&tm);
     
     //Check the display format and output appropriate info.
-    if(TIME){
-      dump_time();
-      digitalWrite(latch, HIGH);
-      digitalWrite(latch, LOW);
-    }else if(DATE){
-      dump_date();
-      digitalWrite(latch, HIGH);
-      digitalWrite(latch, LOW);
-    }else if(DATETIME){
-      if(toggleDisplay){
-        dump_date();
-      }else{
-        dump_time();
-      }
-      digitalWrite(latch, HIGH);
-      digitalWrite(latch, LOW);
+    switch(displayFormat){
+      case 0:
+        func_replace(dump_time);
+        break;
+      case 1:
+        func_replace(dump_date);
+        break;
+      case 2:
+        if(toggleDisplay){
+          func_replace(dump_date);
+        }else{
+          func_replace(dump_time);
+        }
+        break;
+      default:
+        Serial.println("Display mode error.");
+        break;
     }
-    
     blink = !blink;
   }
 
