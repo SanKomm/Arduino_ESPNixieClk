@@ -98,6 +98,18 @@ void toUpper(char *output){
 *Parameters:   output - char array containing ouput.
 */
 void setDisplay(char output[]){
+  char *formats[] = {"TIME", "DATE", "DTTM", 0};
+  int i = 0;
+  //Otsib sobivat vastet display formaadile
+  while(formats[i]){
+    if(!strcmp(output,formats[i])){
+      //Anna enumile oige vaartus
+      displayFormat = (format)i;
+      break;
+    }
+    i++;
+  }
+  /*
   if(!strcmp(output,"TIME")){
     displayFormat = TIME;
     Serial.println("Displaying time.");
@@ -113,7 +125,9 @@ void setDisplay(char output[]){
     displayFormat = TIME;
     Serial.println("Displaying time.");
   }
+  */
 }
+
 
 /*
 *Description:  Writes an appropriate bit to the data pin.
