@@ -258,7 +258,7 @@ void setup() {
   char bufferStr[700];
   // The sprintf is so we can input the value of the current selected day
   // If you dont need to do that, then just pass the const char* straight in.
-  sprintf(bufferStr, day_select_str, 3);
+  sprintf(bufferStr, day_select_str, displayFormat);
 
   WiFiManagerParameter custom_field(bufferStr);
   char convertedValue[16];
@@ -287,7 +287,9 @@ void setup() {
   strcpy(output, custom_output.getValue());
   toUpper(output);
   //setDisplay(output);
-  int stupid = (int)custom_hidden.getValue();
+  int stupid = atoi(custom_hidden.getValue());
+  Serial.println("Hidden value: ");
+  Serial.println(stupid);
   displayFormat = (format)stupid;
 
 }
