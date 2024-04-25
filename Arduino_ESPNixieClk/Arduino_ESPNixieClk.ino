@@ -241,6 +241,33 @@ void setup() {
   //Add the input to the WifiManager.
   wifiManager.addParameter(&custom_output);
 
+  const char *day_select_str = R"(
+  <br/><label for='day'>Custom Field Label</label>
+  <select name="dayOfWeek" id="day" onchange="document.getElementById('key_custom').value = this.value">
+    <option value="0">Time</option>
+    <option value="1">Date</option>
+    <option value="2">Time and Date</option>
+  </select>
+  <script>
+    document.getElementById('day').value = "%d";
+    document.querySelector("[for='key_custom']").hidden = true;
+    document.getElementById('key_custom').hidden = true;
+  </script>
+  )";
+
+  char bufferStr[700];
+  // The sprintf is so we can input the value of the current selected day
+  // If you dont need to do that, then just pass the const char* straight in.
+  sprintf(bufferStr, day_select_str, 3);
+
+  WiFiManagerParameter custom_field(bufferStr);
+  char convertedValue[16];
+  sprintf(convertedValue, "%d", 3); // Need to convert to string to display a default value.
+  WiFiManagerParameter custom_hidden("key_custom", "Will be hidden", convertedValue, 2);
+
+  wifiManager.addParameter(&custom_hidden);
+  wifiManager.addParameter(&custom_field);
+
   //Retrieve device MAC address in bytes.
   byte macAdr[6];
   WiFi.macAddress(macAdr);
@@ -254,11 +281,14 @@ void setup() {
   
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
+  Serial.println(custom_hidden.getValue());
 
   //Take display input, convert it to uppercase and set display format based on the result.
   strcpy(output, custom_output.getValue());
   toUpper(output);
-  setDisplay(output);
+  //setDisplay(output);
+  int stupid = (int)custom_hidden.getValue();
+  displayFormat = (format)stupid;
 
 }
 
