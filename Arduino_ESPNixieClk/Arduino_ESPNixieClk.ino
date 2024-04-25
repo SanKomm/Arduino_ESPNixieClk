@@ -6,8 +6,7 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 #include <WiFiManager.h>
 #include <TimeLib.h>
 
-//Timezone, NTP server and refresh interval.
-#define MY_TZ "EET-2EEST,M3.5.0/3,M10.5.0/4"
+//NTP server and refresh interval.
 #define MY_NTP_SERVER "at.pool.ntp.org"
 #define updateInterval 360000
 
@@ -30,7 +29,7 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 const char timeZone[][30] = {"EET-2EEST,M3.5.0/3,M10.5.0/4","GMT0BST,M3.5.0/1,M10.5.0","CET-1CEST,M3.5.0,M10.5.0/3"};
 
 enum format{
-  TIME = 0,
+  TIME,
   DATE,
   DATETIME
 };
@@ -38,14 +37,6 @@ enum format displayFormat = TIME;
 
 bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
-
-//Define NTP Client to get time.
-/*
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds, eightHrInterval);
-*/
-//Default value for clock display format.
-char output[] = "TIME";
 
 //Time structs
 time_t no;
@@ -79,56 +70,6 @@ void mac_address(byte macAdr[],char *tmp){
   int clkLen_2 = strlen(tmp);
   tmp[24] = '\0';
 }
-
-/*
-*Description:  Converts any lowercase characters to uppercase.
-*Parameters:   output - pointer to convertable char array.
-*/
-void toUpper(char *output){
-  char uLetters[] = "ABCDEFGHIJKLMNOPQRSTUVWXY";
-  int len = strlen(output);
-  for(int i=0;i<len;i++){
-    if(strchr(uLetters,output[i])==NULL){
-      output[i] = output[i]-'a'+'A';
-    }
-  }
-}
-
-/*
-*Description:  Sets the display based on the WifiManager output.
-*Parameters:   output - char array containing ouput.
-*/
-void setDisplay(char output[]){
-  char *formats[] = {"TIME", "DATE", "DTTM", 0};
-  int i = 0;
-  //Otsib sobivat vastet display formaadile
-  while(formats[i]){
-    if(!strcmp(output,formats[i])){
-      //Anna enumile oige vaartus
-      displayFormat = (format)i;
-      break;
-    }
-    i++;
-  }
-  /*
-  if(!strcmp(output,"TIME")){
-    displayFormat = TIME;
-    Serial.println("Displaying time.");
-  }else if(!strcmp(output,"DATE")){
-    displayFormat = DATE;
-    Serial.println("Displaying date.");
-  }else if(!strcmp(output,"DTTM")){
-    displayFormat = DATETIME;
-    Serial.println("Displaying date and time.");
-  }else{
-    Serial.print("Output mode error: ");
-    Serial.println(output);
-    displayFormat = TIME;
-    Serial.println("Displaying time.");
-  }
-  */
-}
-
 
 /*
 *Description:  Writes an appropriate bit to the data pin.
@@ -209,8 +150,8 @@ void dump_date(){
     bitbang_digit((year-2000) % 10);
 }
 
-//Rename
-void func_replace(void (*func)(void)){
+//Calls porvided function and writes to latch
+void use_func(void (*func)(void)){
   func();
   digitalWrite(latch, HIGH);
   digitalWrite(latch, LOW);
@@ -233,9 +174,6 @@ void setup() {
   
   //Uncomment and run it once, if you want to erase all the stored information.
   wifiManager.resetSettings();
-
-  //Add the input to the WifiManager.
-  //wifiManager.addParameter(&custom_output);
   
   //This is for getting the display format
   const char *time_select_str = R"(
@@ -253,14 +191,14 @@ void setup() {
   )";
 
   //Make the parameter with an initial value
-  char bufferStr[700];
-  sprintf(bufferStr, time_select_str, displayFormat);
-  WiFiManagerParameter custom_field(bufferStr);
+  char displayBuffer[700];
+  sprintf(displayBuffer, time_select_str, displayFormat);
+  WiFiManagerParameter display_field(displayBuffer);
 
   //Create a hidden parameter to get selection from page
   char convertedValue[16];
   sprintf(convertedValue, "%d", displayFormat); // Need to convert to string to display a default value.
-  WiFiManagerParameter custom_hidden("key_custom", "Will be hidden", convertedValue, 2);
+  WiFiManagerParameter display_data("key_custom", "Will be hidden", convertedValue, 2);
   
   //This is for getting the timezone
   const char *tz_select_str = R"(
@@ -278,20 +216,19 @@ void setup() {
   )";
 
   //Make the parameter with an initial value
-  char bufferStr2[700];
-  sprintf(bufferStr2, tz_select_str, 0);
-  WiFiManagerParameter custom_field2(bufferStr2);
+  char timezoneBuffer[700];
+  sprintf(timezoneBuffer, tz_select_str, 0);
+  WiFiManagerParameter timezone_field(timezoneBuffer);
 
   //Create a hidden parameter to get selection from page
-  char convertedValue2[16];
-  sprintf(convertedValue2, "%d", 0); // Need to convert to string to display a default value.
-  WiFiManagerParameter custom_hidden2("key_custom2", "Will be hidden", convertedValue2, 2);
+  sprintf(convertedValue, "%d", 0); // Need to convert to string to display a default value.
+  WiFiManagerParameter timezone_data("key_custom2", "Will be hidden", convertedValue, 2);
 
   //Add fields
-  wifiManager.addParameter(&custom_hidden);
-  wifiManager.addParameter(&custom_field);
-  wifiManager.addParameter(&custom_hidden2);
-  wifiManager.addParameter(&custom_field2);
+  wifiManager.addParameter(&display_data);
+  wifiManager.addParameter(&display_field);
+  wifiManager.addParameter(&timezone_data);
+  wifiManager.addParameter(&timezone_field);
 
   //Retrieve device MAC address in bytes.
   byte macAdr[6];
@@ -306,24 +243,12 @@ void setup() {
   
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
-  Serial.println(custom_hidden.getValue());
-  Serial.println(custom_hidden2.getValue());
-
-  //Take display input, convert it to uppercase and set display format based on the result.
-  //strcpy(output, custom_output.getValue());
-  //toUpper(output);
-  //setDisplay(output);
-  int stupid = atoi(custom_hidden.getValue());
-  Serial.println("Hidden value: ");
-  Serial.println(stupid);
 
   //Timezone and NTP configuration
-  configTime(timeZone[atoi(custom_hidden2.getValue())], MY_NTP_SERVER);
+  configTime(timeZone[atoi(timezone_data.getValue())], MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
-
   
-  displayFormat = (format)stupid;
-
+  displayFormat = (format)atoi(display_data.getValue());
 }
 
 //Main loop
@@ -338,16 +263,16 @@ void loop(){
     //Check the display format and output appropriate info.
     switch(displayFormat){
       case 0:
-        func_replace(dump_time);
+        use_func(dump_time);
         break;
       case 1:
-        func_replace(dump_date);
+        use_func(dump_date);
         break;
       case 2:
         if(toggleDisplay){
-          func_replace(dump_date);
+          use_func(dump_date);
         }else{
-          func_replace(dump_time);
+          use_func(dump_time);
         }
         break;
       default:
