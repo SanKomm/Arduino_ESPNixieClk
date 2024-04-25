@@ -27,9 +27,10 @@ const long interval = 1000;
 bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const char timeZone[][30] = {"EET-2EEST,M3.5.0/3,M10.5.0/4","GMT0BST,M3.5.0/1,M10.5.0","CET-1CEST,M3.5.0,M10.5.0/3"};
 
 enum format{
-  TIME,
+  TIME = 0,
   DATE,
   DATETIME
 };
@@ -227,46 +228,70 @@ void setup() {
   digitalWrite(data, LOW);
 
   //Input for display format in WifiManager. Limit characters to 4.
-  WiFiManagerParameter custom_output("State", "output", output, 4);
+  //WiFiManagerParameter custom_output("State", "output", output, 4);
   WiFiManager wifiManager;
   
-  //Timezone and NTP configuration
-  configTime(MY_TZ, MY_NTP_SERVER);
-
-  settimeofday_cb(time_is_set);
-
   //Uncomment and run it once, if you want to erase all the stored information.
   wifiManager.resetSettings();
 
   //Add the input to the WifiManager.
-  wifiManager.addParameter(&custom_output);
-
-  const char *day_select_str = R"(
-  <br/><label for='day'>Custom Field Label</label>
-  <select name="dayOfWeek" id="day" onchange="document.getElementById('key_custom').value = this.value">
+  //wifiManager.addParameter(&custom_output);
+  
+  //This is for getting the display format
+  const char *time_select_str = R"(
+  <label for='display'>Clock display format</label>
+  <select name="timeDisplay" id="display" onchange="document.getElementById('key_custom').value = this.value">
     <option value="0">Time</option>
     <option value="1">Date</option>
     <option value="2">Time and Date</option>
   </select>
   <script>
-    document.getElementById('day').value = "%d";
+    document.getElementById('display').value = "%d";
     document.querySelector("[for='key_custom']").hidden = true;
     document.getElementById('key_custom').hidden = true;
   </script>
   )";
 
+  //Make the parameter with an initial value
   char bufferStr[700];
-  // The sprintf is so we can input the value of the current selected day
-  // If you dont need to do that, then just pass the const char* straight in.
-  sprintf(bufferStr, day_select_str, displayFormat);
-
+  sprintf(bufferStr, time_select_str, displayFormat);
   WiFiManagerParameter custom_field(bufferStr);
-  char convertedValue[16];
-  sprintf(convertedValue, "%d", 3); // Need to convert to string to display a default value.
-  WiFiManagerParameter custom_hidden("key_custom", "Will be hidden", convertedValue, 2);
 
+  //Create a hidden parameter to get selection from page
+  char convertedValue[16];
+  sprintf(convertedValue, "%d", displayFormat); // Need to convert to string to display a default value.
+  WiFiManagerParameter custom_hidden("key_custom", "Will be hidden", convertedValue, 2);
+  
+  //This is for getting the timezone
+  const char *tz_select_str = R"(
+  <br/><label for='zone'>Timezone selection</label>
+  <select name="timeZone" id="zone" onchange="document.getElementById('key_custom2').value = this.value">
+    <option value="0">Estonia</option>
+    <option value="1">London</option>
+    <option value="2">Paris</option>
+  </select>
+  <script>
+    document.getElementById('zone').value = "%d";
+    document.querySelector("[for='key_custom2']").hidden = true;
+    document.getElementById('key_custom2').hidden = true;
+  </script>
+  )";
+
+  //Make the parameter with an initial value
+  char bufferStr2[700];
+  sprintf(bufferStr2, tz_select_str, 0);
+  WiFiManagerParameter custom_field2(bufferStr2);
+
+  //Create a hidden parameter to get selection from page
+  char convertedValue2[16];
+  sprintf(convertedValue2, "%d", 0); // Need to convert to string to display a default value.
+  WiFiManagerParameter custom_hidden2("key_custom2", "Will be hidden", convertedValue2, 2);
+
+  //Add fields
   wifiManager.addParameter(&custom_hidden);
   wifiManager.addParameter(&custom_field);
+  wifiManager.addParameter(&custom_hidden2);
+  wifiManager.addParameter(&custom_field2);
 
   //Retrieve device MAC address in bytes.
   byte macAdr[6];
@@ -282,14 +307,21 @@ void setup() {
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
   Serial.println(custom_hidden.getValue());
+  Serial.println(custom_hidden2.getValue());
 
   //Take display input, convert it to uppercase and set display format based on the result.
-  strcpy(output, custom_output.getValue());
-  toUpper(output);
+  //strcpy(output, custom_output.getValue());
+  //toUpper(output);
   //setDisplay(output);
   int stupid = atoi(custom_hidden.getValue());
   Serial.println("Hidden value: ");
   Serial.println(stupid);
+
+  //Timezone and NTP configuration
+  configTime(timeZone[atoi(custom_hidden2.getValue())], MY_NTP_SERVER);
+  settimeofday_cb(time_is_set);
+
+  
   displayFormat = (format)stupid;
 
 }
