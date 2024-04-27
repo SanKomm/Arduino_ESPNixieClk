@@ -26,7 +26,14 @@ const long interval = 1000;
 bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-const char timeZone[][30] = {"EET-2EEST,M3.5.0/3,M10.5.0/4","GMT0BST,M3.5.0/1,M10.5.0","CET-1CEST,M3.5.0,M10.5.0/3"};
+char timeZone[][30] = {
+  "Africa/Brazzaville", "WAT-1",
+  "America/Chicago", "CST6CDT,M3.2.0,M11.1.0",
+  "Asia/Bangkok", "ICT-7",
+  "Europe/Tallinn","EET-2EEST,M3.5.0/3,M10.5.0/4",
+  "Europe/London","GMT0BST,M3.5.0/1,M10.5.0",
+  "Europe/Paris","CET-1CEST,M3.5.0,M10.5.0/3",
+};
 
 enum format{
   TIME,
@@ -157,6 +164,79 @@ void use_func(void (*func)(void)){
   digitalWrite(latch, LOW);
 }
 
+//Add up the 
+void html_script_text(int length, char **pointer){
+  char first_half[] = R"(
+  <br/><label for='zone'>Timezone selection</label>
+  <select name="timeZone" id="zone" onchange="document.getElementById('key_custom2').value = this.value">
+  )";
+
+  char second_half[] = R"(
+  </select>
+  <script>
+    document.getElementById('zone').value = 0;
+    document.querySelector("[for='key_custom2']").hidden = true;
+    document.getElementById('key_custom2').hidden = true;
+  </script>
+  )";
+
+  int tempSize;
+  size_t needed = snprintf(NULL, 0, "%s", *pointer);
+  tempSize += needed;
+  Serial.println(needed);
+  Serial.println(*pointer);
+  needed = snprintf(NULL, 0, "%s", first_half);
+  tempSize += needed;
+  Serial.println(needed);
+  Serial.println(sizeof(first_half)/sizeof(first_half[0]));
+  Serial.println(first_half);
+  needed = snprintf(NULL, 0, "%s", second_half);
+  tempSize += needed;
+  Serial.println(needed);
+  Serial.println(second_half);
+  /*
+  </select>
+  <script>
+    document.getElementById('zone').value = "%d";
+    document.querySelector("[for='key_custom2']").hidden = true;
+    document.getElementById('key_custom2').hidden = true;
+  </script>)";
+  */
+  char *temp = (char*)malloc(sizeof(char)* tempSize + 1);
+  
+  snprintf(temp, tempSize, "%s%s%s", first_half, *pointer, second_half);
+
+  //strncat(temp, second_half,6);
+  *pointer = temp;
+  Serial.println(*pointer);
+}
+
+void testFunc(int *size,char **pointer){
+  
+  char str[] = R"(<option value="%d">%s</option>
+  )";
+  int mems = (sizeof(timeZone)/sizeof(*timeZone))/2;
+  int bufSize = sizeof(str)/sizeof(str[0]) + 30;
+  
+  int len = bufSize * mems + 1;//30 / len of timeZone element
+
+  char *temp = (char*)malloc(sizeof(char) * bufSize * mems + 1);
+  if(!temp){
+    Serial.println("Alloc error.");
+  }
+  temp[0] = '\0';//Empty string
+  char buf[bufSize + 1];
+
+  for(int i = 0;i<mems;i++){
+    sprintf(buf,str,i,timeZone[i*2]);
+    strncat(temp, buf, bufSize-1);
+  }
+  *pointer = temp;
+  Serial.println("In testFunc");
+  Serial.println(*pointer);
+  *size = strlen(temp);
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -174,7 +254,7 @@ void setup() {
   
   //Uncomment and run it once, if you want to erase all the stored information.
   wifiManager.resetSettings();
-  
+
   //This is for getting the display format
   const char *time_select_str = R"(
   <label for='display'>Clock display format</label>
@@ -199,21 +279,15 @@ void setup() {
   char convertedValue[16];
   sprintf(convertedValue, "%d", displayFormat); // Need to convert to string to display a default value.
   WiFiManagerParameter display_data("key_custom", "Will be hidden", convertedValue, 2);
-  
+ 
+  char *tz_select_str;
+  int length;
+  testFunc(&length,&tz_select_str);
+  Serial.println("In setup");
+  Serial.println(tz_select_str);
+  html_script_text(length, &tz_select_str);
+
   //This is for getting the timezone
-  const char *tz_select_str = R"(
-  <br/><label for='zone'>Timezone selection</label>
-  <select name="timeZone" id="zone" onchange="document.getElementById('key_custom2').value = this.value">
-    <option value="0">Estonia</option>
-    <option value="1">London</option>
-    <option value="2">Paris</option>
-  </select>
-  <script>
-    document.getElementById('zone').value = "%d";
-    document.querySelector("[for='key_custom2']").hidden = true;
-    document.getElementById('key_custom2').hidden = true;
-  </script>
-  )";
 
   //Make the parameter with an initial value
   char timezoneBuffer[700];
@@ -245,7 +319,7 @@ void setup() {
   Serial.println("Connected.");
 
   //Timezone and NTP configuration
-  configTime(timeZone[atoi(timezone_data.getValue())], MY_NTP_SERVER);
+  configTime(timeZone[atoi(timezone_data.getValue())+1], MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
   
   displayFormat = (format)atoi(display_data.getValue());
