@@ -41,6 +41,9 @@ jobs:
       - name: Install wifi lib
         run: arduino-cli lib install wifimanager
 
+      - name: Make timezones
+	run: python timezones.py
+
       - name: Compile Sketch
         run: >
           arduino-cli compile --fqbn ${{ matrix.fqbn }} -e

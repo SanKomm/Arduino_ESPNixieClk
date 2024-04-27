@@ -281,12 +281,7 @@ void setup() {
   html_script_text(length, &tz_select_str);
 
   //This is for getting the timezone
-
-  //Make the parameter with an initial value
-  char timezoneBuffer[700];
-  sprintf(timezoneBuffer, tz_select_str, 0);
   WiFiManagerParameter timezone_field(timezones);
-
 
   char this_is_string[30];
   //Create a hidden parameter to get selection from page
