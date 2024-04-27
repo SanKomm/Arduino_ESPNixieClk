@@ -5,6 +5,7 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 
 #include <WiFiManager.h>
 #include <TimeLib.h>
+#include "timezones.h"
 
 //NTP server and refresh interval.
 #define MY_NTP_SERVER "at.pool.ntp.org"
@@ -194,19 +195,11 @@ void html_script_text(int length, char **pointer){
   tempSize += needed;
   Serial.println(needed);
   Serial.println(second_half);
-  /*
-  </select>
-  <script>
-    document.getElementById('zone').value = "%d";
-    document.querySelector("[for='key_custom2']").hidden = true;
-    document.getElementById('key_custom2').hidden = true;
-  </script>)";
-  */
+  
   char *temp = (char*)malloc(sizeof(char)* tempSize + 1);
   
   snprintf(temp, tempSize, "%s%s%s", first_half, *pointer, second_half);
 
-  //strncat(temp, second_half,6);
   *pointer = temp;
   Serial.println(*pointer);
 }
