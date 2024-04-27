@@ -285,11 +285,13 @@ void setup() {
   //Make the parameter with an initial value
   char timezoneBuffer[700];
   sprintf(timezoneBuffer, tz_select_str, 0);
-  WiFiManagerParameter timezone_field(timezoneBuffer);
+  WiFiManagerParameter timezone_field(timezones);
 
+
+  char this_is_string[30];
   //Create a hidden parameter to get selection from page
-  sprintf(convertedValue, "%d", 0); // Need to convert to string to display a default value.
-  WiFiManagerParameter timezone_data("key_custom2", "Will be hidden", convertedValue, 2);
+  sprintf(this_is_string, "%s","GMT0"); // Need to convert to string to display a default value.
+  WiFiManagerParameter timezone_data("key_custom2", "Will be hidden", this_is_string, 30);
 
   //Add fields
   wifiManager.addParameter(&display_data);

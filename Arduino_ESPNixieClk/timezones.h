@@ -478,4 +478,5 @@ const char *timezones = R"(
 document.getElementById('zone').value = GMT0>Africa/Abidjan;
 document.querySelector("[for='key_custom2']").hidden = true;
 document.getElementById('key_custom2').hidden = true;
-</script>)";
+</script>
+)";
