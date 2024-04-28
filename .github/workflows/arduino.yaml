@@ -40,9 +40,12 @@ jobs:
 
       - name: Install wifi lib
         run: arduino-cli lib install wifimanager
+        
+      - name: Install wifi lib
+        run: arduino-cli lib install ESP8266TimerInterrupt
 
       - name: Make timezones
-	run: python timezones.py
+        run: python timezones.py
 
       - name: Compile Sketch
         run: >
