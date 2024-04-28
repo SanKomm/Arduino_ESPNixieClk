@@ -165,71 +165,6 @@ void use_func(void (*func)(void)){
   digitalWrite(latch, LOW);
 }
 
-//Add up the 
-void html_script_text(int length, char **pointer){
-  char first_half[] = R"(
-  <br/><label for='zone'>Timezone selection</label>
-  <select name="timeZone" id="zone" onchange="document.getElementById('key_custom2').value = this.value">
-  )";
-
-  char second_half[] = R"(
-  </select>
-  <script>
-    document.getElementById('zone').value = 0;
-    document.querySelector("[for='key_custom2']").hidden = true;
-    document.getElementById('key_custom2').hidden = true;
-  </script>
-  )";
-
-  int tempSize;
-  size_t needed = snprintf(NULL, 0, "%s", *pointer);
-  tempSize += needed;
-  Serial.println(needed);
-  Serial.println(*pointer);
-  needed = snprintf(NULL, 0, "%s", first_half);
-  tempSize += needed;
-  Serial.println(needed);
-  Serial.println(sizeof(first_half)/sizeof(first_half[0]));
-  Serial.println(first_half);
-  needed = snprintf(NULL, 0, "%s", second_half);
-  tempSize += needed;
-  Serial.println(needed);
-  Serial.println(second_half);
-  
-  char *temp = (char*)malloc(sizeof(char)* tempSize + 1);
-  
-  snprintf(temp, tempSize, "%s%s%s", first_half, *pointer, second_half);
-
-  *pointer = temp;
-  Serial.println(*pointer);
-}
-
-void testFunc(int *size,char **pointer){
-  
-  char str[] = R"(<option value="%d">%s</option>
-  )";
-  int mems = (sizeof(timeZone)/sizeof(*timeZone))/2;
-  int bufSize = sizeof(str)/sizeof(str[0]) + 30;
-  
-  int len = bufSize * mems + 1;//30 / len of timeZone element
-
-  char *temp = (char*)malloc(sizeof(char) * bufSize * mems + 1);
-  if(!temp){
-    Serial.println("Alloc error.");
-  }
-  temp[0] = '\0';//Empty string
-  char buf[bufSize + 1];
-
-  for(int i = 0;i<mems;i++){
-    sprintf(buf,str,i,timeZone[i*2]);
-    strncat(temp, buf, bufSize-1);
-  }
-  *pointer = temp;
-  Serial.println("In testFunc");
-  Serial.println(*pointer);
-  *size = strlen(temp);
-}
-
 void setup() {
   Serial.begin(115200);
   
@@ -272,20 +207,13 @@ void setup() {
   char convertedValue[16];
   sprintf(convertedValue, "%d", displayFormat); // Need to convert to string to display a default value.
   WiFiManagerParameter display_data("key_custom", "Will be hidden", convertedValue, 2);
- 
-  char *tz_select_str;
-  int length;
-  testFunc(&length,&tz_select_str);
-  Serial.println("In setup");
-  Serial.println(tz_select_str);
-  html_script_text(length, &tz_select_str);
 
   //This is for getting the timezone
   WiFiManagerParameter timezone_field(timezones);
 
   char this_is_string[30];
   //Create a hidden parameter to get selection from page
-  sprintf(this_is_string, "%s","GMT0"); // Need to convert to string to display a default value.
+  sprintf(this_is_string, "%s","CET-1CEST,M3.5.0,M10.5.0/3"); // Need to convert to string to display a default value.
   WiFiManagerParameter timezone_data("key_custom2", "Will be hidden", this_is_string, 30);
 
   //Add fields
@@ -309,7 +237,7 @@ void setup() {
   Serial.println("Connected.");
 
   //Timezone and NTP configuration
-  configTime(timeZone[atoi(timezone_data.getValue())+1], MY_NTP_SERVER);
+  configTime(timezone_data.getValue(), MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
   
   displayFormat = (format)atoi(display_data.getValue());
