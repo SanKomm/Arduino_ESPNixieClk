@@ -27,14 +27,6 @@ const long interval = 1000;
 bool toggleDisplay = false;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-char timeZone[][30] = {
-  "Africa/Brazzaville", "WAT-1",
-  "America/Chicago", "CST6CDT,M3.2.0,M11.1.0",
-  "Asia/Bangkok", "ICT-7",
-  "Europe/Tallinn","EET-2EEST,M3.5.0/3,M10.5.0/4",
-  "Europe/London","GMT0BST,M3.5.0/1,M10.5.0",
-  "Europe/Paris","CET-1CEST,M3.5.0,M10.5.0/3",
-};
 
 enum format{
   TIME,
@@ -201,26 +193,23 @@ void setup() {
   //Make the parameter with an initial value
   char displayBuffer[700];
   sprintf(displayBuffer, time_select_str, displayFormat);
-  WiFiManagerParameter display_field(displayBuffer);
+  WiFiManagerParameter displayField(displayBuffer);
 
   //Create a hidden parameter to get selection from page
-  char convertedValue[16];
-  sprintf(convertedValue, "%d", displayFormat); // Need to convert to string to display a default value.
-  WiFiManagerParameter display_data("key_custom", "Will be hidden", convertedValue, 2);
+  char defaultValue[30];
+  sprintf(defaultValue, "%d", displayFormat); // Need to convert to string to display a default value.
+  WiFiManagerParameter displayData("key_custom", "Will be hidden", defaultValue, 2);
 
   //This is for getting the timezone
-  WiFiManagerParameter timezone_field(timezones);
+  WiFiManagerParameter timezoneField(timezones);
 
-  char this_is_string[30];
-  //Create a hidden parameter to get selection from page
-  sprintf(this_is_string, "%s","CET-1CEST,M3.5.0,M10.5.0/3"); // Need to convert to string to display a default value.
-  WiFiManagerParameter timezone_data("key_custom2", "Will be hidden", this_is_string, 30);
+  WiFiManagerParameter timezoneData("key_custom2", "Will be hidden", "CET-1CEST,M3.5.0,M10.5.0/3", 30);
 
   //Add fields
-  wifiManager.addParameter(&display_data);
-  wifiManager.addParameter(&display_field);
-  wifiManager.addParameter(&timezone_data);
-  wifiManager.addParameter(&timezone_field);
+  wifiManager.addParameter(&displayData);
+  wifiManager.addParameter(&displayField);
+  wifiManager.addParameter(&timezoneData);
+  wifiManager.addParameter(&timezoneField);
 
   //Retrieve device MAC address in bytes.
   byte macAdr[6];
@@ -237,10 +226,9 @@ void setup() {
   Serial.println("Connected.");
 
   //Timezone and NTP configuration
-  configTime(timezone_data.getValue(), MY_NTP_SERVER);
+  configTime(timezoneData.getValue(), MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
-  
-  displayFormat = (format)atoi(display_data.getValue());
+  displayFormat = (format)atoi(displayData.getValue());
 }
 
 //Main loop
