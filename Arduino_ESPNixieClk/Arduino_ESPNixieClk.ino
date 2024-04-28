@@ -6,27 +6,32 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 #include <WiFiManager.h>
 #include <TimeLib.h>
 #include "timezones.h"
+#include "ESP8266TimerInterrupt.h"
+#include "ESP8266_ISR_Timer.hpp"
+#include "ESP8266_ISR_Timer.h"
+ESP8266Timer ITimer;
 
 //NTP server and refresh interval.
 #define MY_NTP_SERVER "at.pool.ntp.org"
 #define updateInterval 360000
+
+//WifiManager
+WiFiManager wm;
 
 //Assign output variables to GPIO pins.
 const int clock1 = 3;
 const int data = 2;
 const int latch = 0;
 
+// Dimmer settings
+int dimming_timer_period = 100;
+int dimming_duty_cycle = 25;
+long dimmer_interrupt_count = 0;
+long dimmer_duty_cycle_count = 0;
+
 //Debug settings.
 const bool DEBUG = true;
 const bool DEBUG_PIN = false;
-
-//Timer, timer interval, display toggle
-unsigned long prevMil = 0;
-unsigned long prevMil_10 = 0;
-const long interval = 1000;
-bool toggleDisplay = false;
-
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 enum format{
   TIME,
@@ -35,6 +40,8 @@ enum format{
 };
 enum format displayFormat = TIME;
 
+int boot_time = 0;
+int ntp_sync_count = 0;
 bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
 
@@ -47,8 +54,13 @@ uint32_t sntp_update_delay_MS_rfc_not_less_than_15000(){
   return 8 * 60 * 60 * 1000ul;//8 hours 
 }
 
-void time_is_set(){
-  Serial.println("Update NTP connection.");
+void ICACHE_RAM_ATTR time_is_set(){
+  Serial.println("Updated NTP connection");
+  if (!boot_time) {
+      time(&no);
+      boot_time = no;
+  }
+  ntp_sync_count++;
 }
 
 /*
@@ -157,6 +169,96 @@ void use_func(void (*func)(void)){
   digitalWrite(latch, LOW);
 }
 
+void clear_display() {
+  for(int i=0;i<6;i++){
+    bitbang_bit(LOW);
+    bitbang_bit(HIGH);
+    bitbang_bit(HIGH);
+    bitbang_bit(HIGH);
+    bitbang_bit(HIGH);
+    bitbang_bit(LOW);
+    bitbang_bit(LOW);
+    bitbang_bit(LOW);
+  }
+  digitalWrite(latch, HIGH);
+  digitalWrite(latch, LOW);
+}
+
+int counter = 0;
+
+void ICACHE_RAM_ATTR dimmerTimerCallback() {
+    dimmer_interrupt_count ++;
+    int counter = dimmer_interrupt_count & 0xff;
+
+    if (counter < dimming_duty_cycle) {
+        dimmer_duty_cycle_count++;
+    }
+    if (counter == 0) {
+        int m = millis() % 1000;
+        blink = m < 500;
+        time(&no);
+        localtime_r(&no,&tm);
+        use_func(dump_time);
+        return;
+    }
+    if (counter == dimming_duty_cycle) {
+        clear_display();
+        return;
+    }
+}
+
+void handleMetrics(){
+  String buf = "";
+  buf += "nixie_boot_time ";
+  buf += boot_time;
+  buf += "\n";
+
+  buf += "nixie_ntp_sync_count ";
+  buf += ntp_sync_count;
+  buf += "\n";
+
+  buf += "nixie_sketch_size_bytes ";
+  buf += ESP.getSketchSize();
+  buf += "\n";
+
+  buf += "nixie_flash_space_bytes ";
+  buf += ESP.getFlashChipRealSize();
+  buf += "\n";
+
+  buf += "nixie_free_heap_bytes ";
+  buf += ESP.getFreeHeap();
+  buf += "\n";
+
+
+  buf += "nixie_dimmer_interrupt_count ";
+  buf += dimmer_interrupt_count;
+  buf += "\n";
+
+  buf += "nixie_dimmer_duty_cycle_count ";
+  buf += dimmer_duty_cycle_count;
+  buf += "\n";
+
+  wm.server->send(200, "text/plain", buf);
+}
+
+const char dimmerSliderSnippet[] = R"(
+  <br/>
+  <label for='dimming_duty_cycle_slider'>Dimming duty cycle</label>
+  <input type="range" min="1" max="255" value="127" class="slider" id="dimming_duty_cycle_slider" onchange="document.getElementById('dimming_duty_cycle').value = this.value">
+  <script>
+  document.getElementById('dimming_duty_cycle').hidden = true;
+  </script>
+  )";
+  
+WiFiManagerParameter param_dimming_duty_cycle_slider(dimmerSliderSnippet);
+WiFiManagerParameter param_dimming_duty_cycle("dimming_duty_cycle", "", "1000", 4);
+
+void ICACHE_RAM_ATTR saveParamsCallback() {
+  Serial.print("Dimming");
+  dimming_duty_cycle = String(param_dimming_duty_cycle.getValue()).toInt();
+  Serial.println(dimming_duty_cycle);
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -167,13 +269,9 @@ void setup() {
   digitalWrite(clock1, LOW);
   digitalWrite(latch, LOW);
   digitalWrite(data, LOW);
-
-  //Input for display format in WifiManager. Limit characters to 4.
-  //WiFiManagerParameter custom_output("State", "output", output, 4);
-  WiFiManager wifiManager;
   
   //Uncomment and run it once, if you want to erase all the stored information.
-  wifiManager.resetSettings();
+  wm.resetSettings();
 
   //This is for getting the display format
   const char *time_select_str = R"(
@@ -206,10 +304,15 @@ void setup() {
   WiFiManagerParameter timezoneData("key_custom2", "Will be hidden", "CET-1CEST,M3.5.0,M10.5.0/3", 30);
 
   //Add fields
-  wifiManager.addParameter(&displayData);
-  wifiManager.addParameter(&displayField);
-  wifiManager.addParameter(&timezoneData);
-  wifiManager.addParameter(&timezoneField);
+  wm.addParameter(&displayData);
+  wm.addParameter(&displayField);
+  wm.addParameter(&timezoneData);
+  wm.addParameter(&timezoneField);
+  wm.addParameter(&param_dimming_duty_cycle);
+  wm.addParameter(&param_dimming_duty_cycle_slider);
+  wm.setShowInfoUpdate(false); // https://github.com/tzapu/WiFiManager/issues/1262
+  wm.setShowInfoErase(false);
+  wm.setSaveParamsCallback(saveParamsCallback);
 
   //Retrieve device MAC address in bytes.
   byte macAdr[6];
@@ -220,7 +323,8 @@ void setup() {
   mac_address(macAdr,connName);
   
   //Create connection point.
-  wifiManager.autoConnect(connName);
+  wm.setConfigPortalBlocking(false);
+  wm.autoConnect(connName);
   
   // if you get here you have connected to the WiFi
   Serial.println("Connected.");
@@ -229,41 +333,21 @@ void setup() {
   configTime(timezoneData.getValue(), MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
   displayFormat = (format)atoi(displayData.getValue());
+
+  time(&no);
+  localtime_r(&no,&tm);
+
+  Serial.println("Starting config portal");
+
+  wm.startConfigPortal();
+  wm.server->on("/metrics", handleMetrics);
+
+  Serial.println("Starting dimmer timer");
+  ITimer.setInterval(dimming_timer_period, dimmerTimerCallback);
 }
 
 //Main loop
 void loop(){
   
-  //If displaying date and time, then switch the deisplay every 10 seconds.
-  if(millis() - prevMil >= interval){
-    prevMil = millis();
-    time(&no);
-    localtime_r(&no,&tm);
-    
-    //Check the display format and output appropriate info.
-    switch(displayFormat){
-      case 0:
-        use_func(dump_time);
-        break;
-      case 1:
-        use_func(dump_date);
-        break;
-      case 2:
-        if(toggleDisplay){
-          use_func(dump_date);
-        }else{
-          use_func(dump_time);
-        }
-        break;
-      default:
-        Serial.println("Display mode error.");
-        break;
-    }
-    blink = !blink;
-  }
-
-  if(millis() - prevMil_10 >= 10*interval){
-    prevMil_10 = millis();
-    toggleDisplay = !toggleDisplay;
-  }
+  wm.process();
 }

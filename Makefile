@@ -11,6 +11,7 @@ deps:
 	arduino-cli core install \
 	--additional-urls=http://arduino.esp8266.com/stable/package_esp8266com_index.json esp8266:esp8266
 	arduino-cli lib install wifimanager
+	arduino-cli lib install ESP8266TimerInterrupt
 	python timezones.py
 
 flash: $(SKETCH_FOLDER)/Arduino_ESPNixieClk.ino.bin
