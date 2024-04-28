@@ -13,8 +13,8 @@ https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-para
 #define MY_NTP_SERVER "at.pool.ntp.org"
 #define updateInterval 360000
 
-//Toggle serial prints
-const bool DEBUG = true;
+//Debug selection
+const bool DEBUG = false;
 const bool DEBUG_PIN = false;
 
 //Assign output variables to GPIO pins.
@@ -43,6 +43,9 @@ int boot_time = 0;
 int ntp_sync_count = 0;
 bool blink = false;
 int lookup[] = {11, 9, 12, 8, 0, 4, 1, 3, 2, 10};
+
+int interval = 0;
+bool toggle = true;
 
 //Time structs
 time_t no;
@@ -147,6 +150,14 @@ void use_func(void (*func)(void)){
   digitalWrite(latch, LOW);
 }
 
+//Toggle display between time and date
+void check_interval(int *interval){
+  if(*interval%10){
+    toggle != toggle;
+    interval = 0;
+  }
+}
+
 void clear_display() {
   for(int i=0;i<6;i++){
     bitbang_bit(LOW);
@@ -161,20 +172,41 @@ void clear_display() {
   digitalWrite(latch, HIGH);
   digitalWrite(latch, LOW);
 }
-int counter = 0;
+
 void ICACHE_RAM_ATTR dimmerTimerCallback() {
     dimmer_interrupt_count ++;
-    counter = dimmer_interrupt_count & 0xff;
-    Serial.println(counter);
+    int counter = dimmer_interrupt_count & 0xff;
+    
     if (counter < dimming_duty_cycle) {
         dimmer_duty_cycle_count++;
     }
     if (counter == 0) {
+        interval++;
         int m = millis() % 1000;
         blink = m < 500;
         time(&no);
         localtime_r(&no,&tm);
         use_func(dump_time);
+        
+        switch (displayFormat){
+          case 0:
+            use_func(dump_time);
+            break;
+          case 1:
+            use_func(dump_date);
+            break;
+          case 2:
+            if(toggle){
+              use_func(dump_date);
+            }else{
+              use_func(dump_time);
+            }
+            break;
+          default:
+            Serial.println("Display error.");
+            break;
+        }
+        
         return;
     }
     if (counter == dimming_duty_cycle) {
@@ -253,24 +285,11 @@ void setup() {
     <option value="2">Time and Date</option>
   </select>
   <script>
-    document.getElementById('display').value = "%d";
+    document.getElementById('display').value = 0;
     document.querySelector("[for='key_custom']").hidden = true;
     document.getElementById('key_custom').hidden = true;
-  </script>)";
-
-  //Make the parameter with an initial value
-  char displayBuffer[700];
-  sprintf(displayBuffer, time_select_str, displayFormat);
-  WiFiManagerParameter displayField(displayBuffer);
-
-  //Create a hidden parameter to get selection from page
-  char defaultValue[2];
-  sprintf(defaultValue, "%d", displayFormat); // Need to convert to string to display a default value.
-  WiFiManagerParameter displayData("key_custom", "Will be hidden", defaultValue, 2);
-
-  //This is for getting the timezone
-  WiFiManagerParameter timezoneField(timezones);
-  WiFiManagerParameter timezoneData("key_custom2", "Will be hidden", "CET-1CEST,M3.5.0,M10.5.0/3", 30);
+  </script>
+  )";
 
   const char dimmerSliderSnippet[] = R"(
   <br/><label for='dimming_duty_cycle_slider'>Dimming duty cycle</label>
@@ -279,7 +298,12 @@ void setup() {
     document.getElementById('dimming_duty_cycle').hidden = true;
   </script>
   )";
-  
+
+  //Make the parameter with an initial value
+  WiFiManagerParameter displayField(time_select_str);
+  WiFiManagerParameter displayData("key_custom", "Will be hidden", "0", 2);
+  WiFiManagerParameter timezoneField(timezones);
+  WiFiManagerParameter timezoneData("key_custom2", "Will be hidden", "CET-1CEST,M3.5.0,M10.5.0/3", 30);
   WiFiManagerParameter param_dimming_duty_cycle_slider(dimmerSliderSnippet);
   WiFiManagerParameter param_dimming_duty_cycle("dimming_duty_cycle", "", "127", 4);
 
@@ -296,7 +320,7 @@ void setup() {
   wm.setShowInfoErase(false);
 
   //Create connection point.
-  //wm.setConfigPortalBlocking(false);
+  wm.setConfigPortalBlocking(false);
   wm.autoConnect();
 
   configTime(timezoneData.getValue(), MY_NTP_SERVER);
@@ -313,7 +337,6 @@ void setup() {
 
   Serial.println("Starting dimmer timer");
   ITimer.setInterval(dimming_timer_period, dimmerTimerCallback);
-  Serial.println("Success");
 }
 
 void loop() {
