@@ -2,36 +2,25 @@
 https://github.com/laurivosandi/nixiesp12/blob/master/firmware/main.py
 https://randomnerdtutorials.com/wifimanager-with-esp8266-autoconnect-custom-parameter-and-manage-your-ssid-and-password/
 */
-
 #include <WiFiManager.h>
 #include <TimeLib.h>
 #include "timezones.h"
 #include "ESP8266TimerInterrupt.h"
 #include "ESP8266_ISR_Timer.hpp"
 #include "ESP8266_ISR_Timer.h"
-ESP8266Timer ITimer;
 
 //NTP server and refresh interval.
 #define MY_NTP_SERVER "at.pool.ntp.org"
 #define updateInterval 360000
 
-//WifiManager
-WiFiManager wm;
+//Toggle serial prints
+const bool DEBUG = true;
+const bool DEBUG_PIN = false;
 
 //Assign output variables to GPIO pins.
 const int clock1 = 3;
 const int data = 2;
 const int latch = 0;
-
-// Dimmer settings
-int dimming_timer_period = 100;
-int dimming_duty_cycle = 25;
-long dimmer_interrupt_count = 0;
-long dimmer_duty_cycle_count = 0;
-
-//Debug settings.
-const bool DEBUG = true;
-const bool DEBUG_PIN = false;
 
 enum format{
   TIME,
@@ -39,6 +28,16 @@ enum format{
   DATETIME
 };
 enum format displayFormat = TIME;
+
+//WifiManager and Timer
+WiFiManager wm;
+ESP8266Timer ITimer;
+
+//Dimmer settings
+int dimming_timer_period = 100;
+int dimming_duty_cycle = 25;
+long dimmer_interrupt_count = 0;
+long dimmer_duty_cycle_count = 0;
 
 int boot_time = 0;
 int ntp_sync_count = 0;
@@ -61,26 +60,6 @@ void ICACHE_RAM_ATTR time_is_set(){
       boot_time = no;
   }
   ntp_sync_count++;
-}
-
-/*
-*Description:  Appends the ESP MAC address to the accesspoint name. 
-*Parameters:   macAdr - The MAC address in bytes.
-*              tmp - pointer to the accesspoint name.
-*/
-void mac_address(byte macAdr[],char *tmp){
-  int clkLen = strlen(tmp);
-
-  for (unsigned int i = 0; i < 6; i++)
-  {
-      byte nib1 = (macAdr[i] >> 4) & 0x0F;
-      byte nib2 = (macAdr[i] >> 0) & 0x0F;
-      tmp[i*2+clkLen] = nib1  < 0xA ? '0' + nib1  : 'A' + nib1  - 0xA;
-      tmp[i*2+clkLen+1] = nib2  < 0xA ? '0' + nib2  : 'A' + nib2  - 0xA;
-  }
-  
-  int clkLen_2 = strlen(tmp);
-  tmp[24] = '\0';
 }
 
 /*
@@ -140,7 +119,6 @@ void dump_time(){
     bitbang_digit(second % 10);
 }
 
-//Description:  Writes the current date to the Nixie clock.
 void dump_date(){
   int day = tm.tm_mday;
   int month = tm.tm_mon+1;
@@ -183,13 +161,11 @@ void clear_display() {
   digitalWrite(latch, HIGH);
   digitalWrite(latch, LOW);
 }
-
 int counter = 0;
-
 void ICACHE_RAM_ATTR dimmerTimerCallback() {
     dimmer_interrupt_count ++;
-    int counter = dimmer_interrupt_count & 0xff;
-
+    counter = dimmer_interrupt_count & 0xff;
+    Serial.println(counter);
     if (counter < dimming_duty_cycle) {
         dimmer_duty_cycle_count++;
     }
@@ -205,6 +181,20 @@ void ICACHE_RAM_ATTR dimmerTimerCallback() {
         clear_display();
         return;
     }
+}
+
+int getParam(String name){
+  String value;
+  if(wm.server->hasArg(name)){
+    value = wm.server->arg(name);
+  }
+  return value.toInt();
+}
+
+void ICACHE_RAM_ATTR saveParamsCallback() {
+  Serial.println("Dimming");
+  dimming_duty_cycle = getParam("dimming_duty_cycle");
+  Serial.println(dimming_duty_cycle);
 }
 
 void handleMetrics(){
@@ -241,28 +231,9 @@ void handleMetrics(){
   wm.server->send(200, "text/plain", buf);
 }
 
-const char dimmerSliderSnippet[] = R"(
-  <br/>
-  <label for='dimming_duty_cycle_slider'>Dimming duty cycle</label>
-  <input type="range" min="1" max="255" value="127" class="slider" id="dimming_duty_cycle_slider" onchange="document.getElementById('dimming_duty_cycle').value = this.value">
-  <script>
-  document.getElementById('dimming_duty_cycle').hidden = true;
-  </script>
-  )";
-  
-WiFiManagerParameter param_dimming_duty_cycle_slider(dimmerSliderSnippet);
-WiFiManagerParameter param_dimming_duty_cycle("dimming_duty_cycle", "", "1000", 4);
-
-void ICACHE_RAM_ATTR saveParamsCallback() {
-  Serial.print("Dimming");
-  dimming_duty_cycle = String(param_dimming_duty_cycle.getValue()).toInt();
-  Serial.println(dimming_duty_cycle);
-}
-
 void setup() {
-  Serial.begin(115200);
-  
-  //Set the pins
+  Serial.begin(9600);
+
   pinMode(clock1, OUTPUT);
   pinMode(latch, OUTPUT);
   pinMode(data, OUTPUT);
@@ -275,7 +246,7 @@ void setup() {
 
   //This is for getting the display format
   const char *time_select_str = R"(
-  <label for='display'>Clock display format</label>
+  <br/><label for='display'>Clock display format</label>
   <select name="timeDisplay" id="display" onchange="document.getElementById('key_custom').value = this.value">
     <option value="0">Time</option>
     <option value="1">Date</option>
@@ -285,8 +256,7 @@ void setup() {
     document.getElementById('display').value = "%d";
     document.querySelector("[for='key_custom']").hidden = true;
     document.getElementById('key_custom').hidden = true;
-  </script>
-  )";
+  </script>)";
 
   //Make the parameter with an initial value
   char displayBuffer[700];
@@ -294,14 +264,24 @@ void setup() {
   WiFiManagerParameter displayField(displayBuffer);
 
   //Create a hidden parameter to get selection from page
-  char defaultValue[30];
+  char defaultValue[2];
   sprintf(defaultValue, "%d", displayFormat); // Need to convert to string to display a default value.
   WiFiManagerParameter displayData("key_custom", "Will be hidden", defaultValue, 2);
 
   //This is for getting the timezone
   WiFiManagerParameter timezoneField(timezones);
-
   WiFiManagerParameter timezoneData("key_custom2", "Will be hidden", "CET-1CEST,M3.5.0,M10.5.0/3", 30);
+
+  const char dimmerSliderSnippet[] = R"(
+  <br/><label for='dimming_duty_cycle_slider'>Dimming duty cycle</label>
+  <input type="range" min="1" max="255" value="127" class="slider" id="dimming_duty_cycle_slider" onchange="document.getElementById('dimming_duty_cycle').value = this.value">
+  <script>
+    document.getElementById('dimming_duty_cycle').hidden = true;
+  </script>
+  )";
+  
+  WiFiManagerParameter param_dimming_duty_cycle_slider(dimmerSliderSnippet);
+  WiFiManagerParameter param_dimming_duty_cycle("dimming_duty_cycle", "", "127", 4);
 
   //Add fields
   wm.addParameter(&displayData);
@@ -310,26 +290,15 @@ void setup() {
   wm.addParameter(&timezoneField);
   wm.addParameter(&param_dimming_duty_cycle);
   wm.addParameter(&param_dimming_duty_cycle_slider);
-  wm.setShowInfoUpdate(false); // https://github.com/tzapu/WiFiManager/issues/1262
-  wm.setShowInfoErase(false);
   wm.setSaveParamsCallback(saveParamsCallback);
 
-  //Retrieve device MAC address in bytes.
-  byte macAdr[6];
-  WiFi.macAddress(macAdr);
-  
-  //connName size is length on "NixieClock-" + 12 MAC chars and 0 terminator.
-  char connName[24] = "NixieClock-";
-  mac_address(macAdr,connName);
-  
-  //Create connection point.
-  wm.setConfigPortalBlocking(false);
-  wm.autoConnect(connName);
-  
-  // if you get here you have connected to the WiFi
-  Serial.println("Connected.");
+  wm.setShowInfoUpdate(false); // https://github.com/tzapu/WiFiManager/issues/1262
+  wm.setShowInfoErase(false);
 
-  //Timezone and NTP configuration
+  //Create connection point.
+  //wm.setConfigPortalBlocking(false);
+  wm.autoConnect();
+
   configTime(timezoneData.getValue(), MY_NTP_SERVER);
   settimeofday_cb(time_is_set);
   displayFormat = (format)atoi(displayData.getValue());
@@ -344,10 +313,9 @@ void setup() {
 
   Serial.println("Starting dimmer timer");
   ITimer.setInterval(dimming_timer_period, dimmerTimerCallback);
+  Serial.println("Success");
 }
 
-//Main loop
-void loop(){
-  
+void loop() {
   wm.process();
 }
